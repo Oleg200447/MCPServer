@@ -6,7 +6,7 @@ This module contains the search_documents MCP tool.
 import httpx
 from typing import List, Optional, Dict, Any
 
-from server import mcp
+from app import mcp
 
 from config import settings
 from models import SearchRequest, Filters, logger
@@ -27,7 +27,7 @@ async def search_documents(
     expansion, relevance scoring, and result ranking.
 
     Args:
-        query: The search query text (minimum 1 character)
+        query: The search query text, reranking in searcha was 
         user_id: User identifier for tracking and personalization
         indices: List of OpenSearch index names to search (minimum 1 required)
         filters: Optional filters to narrow search results:
