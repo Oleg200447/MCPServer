@@ -3,4 +3,6 @@
 This package contains additional tools for the MCP Search Server.
 """
 
-__all__ = []
+from .search import search_documents
+
+__all__ = ["search_documents"]
