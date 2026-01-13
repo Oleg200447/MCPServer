@@ -1,0 +1,61 @@
+version: '3.8'
+
+services:
+  mcp_search_server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mcp_search_server
+    ports:
+      - "8080:8080"
+    environment:
+      # Search Service Configuration
+      - SEARCH_SERVICE_URL=http://search_service:8008
+      - SEARCH_TIMEOUT=30
+      
+      # MCP Server Configuration
+      - MCP_SERVER_HOST=0.0.0.0
+      - MCP_SERVER_PORT=8080
+      
+      # Default Values
+      - DEFAULT_USER_ID=system
+      
+      # Logging Configuration
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      
+      # Request Configuration
+      - MAX_RETRIES=3
+      - RETRY_DELAY=1.0
+    networks:
+      - test_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8080/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      - search_service
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Mock search service for testing (optional - remove if you have actual service)
+  search_service:
+    image: nginx:alpine
+    container_name: search_service
+    ports:
+      - "8008:80"
+    networks:
+      - test_network
+    # Replace this with your actual search service configuration
+
+networks:
+  test_network:
+    name: test_network
+    driver: bridge
+    external: false
