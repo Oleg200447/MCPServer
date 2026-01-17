@@ -5,6 +5,7 @@ and data structures used throughout the application.
 """
 
 import structlog
+from datetime import datetime
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field, field_validator
 
@@ -23,14 +24,32 @@ structlog.configure(
 logger = structlog.get_logger()
 
 
-class Filters(BaseModel):
-    """Optional filters for search queries."""
+class DateRange(BaseModel):
+    """Date range filter for search."""
+    from_date: str = Field(..., alias="from", description="Start date in ISO format")
+    to_date: str = Field(..., alias="to", description="End date in ISO format")
 
-    categories: Optional[List[str]] = Field(None, description="Filter by categories")
-    date_from: Optional[str] = Field(None, description="Filter results from this date")
-    date_to: Optional[str] = Field(None, description="Filter results until this date")
-    tags: Optional[List[str]] = Field(None, description="Filter by tags")
-    metadata: Optional[Dict[str, Any]] = Field(None, description="Additional metadata filters")
+    @field_validator("from_date", "to_date")
+    @classmethod
+    def validate_date_format(cls, v: str) -> str:
+        """Validate ISO date format."""
+        try:
+            datetime.fromisoformat(v.replace('Z', '+00:00'))
+            return v
+        except ValueError:
+            raise ValueError(f"Invalid date format: {v}. Expected ISO 8601 format (e.g., 2024-01-01)")
+
+    def validate_range(self):
+        """Validate that from_date is before to_date."""
+        from_dt = datetime.fromisoformat(self.from_date.replace('Z', '+00:00'))
+        to_dt = datetime.fromisoformat(self.to_date.replace('Z', '+00:00'))
+        if from_dt > to_dt:
+            raise ValueError("'from' date must be before 'to' date")
+
+
+class Filters(BaseModel):
+    """Search filters."""
+    date_range: Optional[DateRange] = None
 
 
 class SearchRequest(BaseModel):
@@ -55,11 +74,10 @@ class SearchRequest(BaseModel):
 class SearchResult(BaseModel):
     """Individual search result."""
 
-    id: str = Field(..., description="Document ID")
+    doc_id: str = Field(..., description="Document identifier")
+    doc_name: str = Field(..., description="Document name")
+    snippet: str = Field(..., description="Relevant text snippet")
     score: float = Field(..., description="Relevance score")
-    source: Dict[str, Any] = Field(..., description="Document source data")
-    index: str = Field(..., description="Index name where document was found")
-    highlights: Optional[Dict[str, List[str]]] = Field(None, description="Highlighted text snippets")
 
 
 class SearchResponse(BaseModel):
@@ -69,3 +87,4 @@ class SearchResponse(BaseModel):
     query_expanded: str = Field(..., description="Query expanded with synonyms")
     processing_time_ms: float = Field(..., description="Total processing time in milliseconds")
     request_id: str = Field(..., description="Unique request identifier")
+    text: str = Field(..., description="Concatinated text from all docs")

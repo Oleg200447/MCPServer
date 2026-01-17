@@ -6,9 +6,15 @@ communication and includes comprehensive validation and error handling.
 """
 
 from app import mcp
+from tools.search import setup_tools
+from promts.search_promts import setup_promts
 
 def main():
     """Run the MCP server."""
+
+    setup_tools(mcp)
+    setup_promts(mcp)
+
     mcp.run(
         host="0.0.0.0",    # слушать все интерфейсы внутри контейнера
         port=8080,         # совпадает с EXPOSE в Dockerfile

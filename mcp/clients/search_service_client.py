@@ -8,7 +8,7 @@ import httpx
 from typing import Optional
 
 from config import settings
-from models import SearchRequest, SearchResponse, logger
+from models import SearchRequest,SearchResult, SearchResponse, logger
 
 
 class SearchServiceClient:
@@ -69,14 +69,32 @@ class SearchServiceClient:
                 )
                 response.raise_for_status()
 
-                # Parse and validate response
-                result = SearchResponse(**response.json())
+                raw_data = response.json()
+
+                # Собираем поле text для LLM
+                if raw_data.get("results"):
+                    full_text = "\n\n".join(
+                        f"Document: {r['doc_name']} (ID: {r['doc_id']})\n{r['text']}"
+                        for r in raw_data["results"]
+                    )
+                else:
+                    full_text = "No results found"
+
+                # Создаём объект SearchResponse с полем text
+                result = SearchResponse(
+                    results=[SearchResult(**r) for r in raw_data.get("results", [])],
+                    query_expanded=raw_data.get("query_expanded", ""),
+                    processing_time_ms=raw_data.get("processing_time_ms", 0.0),
+                    request_id=raw_data.get("request_id", ""),
+                    text=full_text
+                )
 
                 logger.info(
                     "search_request_successful",
                     request_id=result.request_id,
                     results_count=len(result.results),
-                    processing_time_ms=result.processing_time_ms
+                    processing_time_ms=result.processing_time_ms,
+                    text = full_text
                 )
 
                 return result
